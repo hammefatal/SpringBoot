@@ -1,0 +1,3 @@
+car=home.hammefatal.springboot.domain.SportsCar
+engine=home.hammefatal.springboot.domain.Engine
+door=home.hammefatal.springboot.domain.Door

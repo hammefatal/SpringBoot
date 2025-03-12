@@ -8,8 +8,22 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.TypedQuery;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -390,6 +404,86 @@ public class jpaController {
 
         user = userRepository.findById(user.getId()).orElse(null);
         System.out.println("user = " + user);
+    }
+
+    public void ManyToOneTest() {
+        User user = new User();
+        user.setId(2L);
+        user.setName("test2");
+        user.setEmail("test2@test2.com");
+        user.setPassword("test2222");
+        userRepository.save(user);
+
+        Board board = new Board();
+        board.setId(1L);
+        board.setTitle("test title");
+        board.setContent("test content");
+        board.setWriter("test writer");
+        board.setUser(user);
+        boardRepository.save(board);
+
+        Board board2 = new Board();
+        board2.setId(2L);
+        board2.setTitle("test title2");
+        board2.setContent("test content2");
+        board2.setWriter("test writer2");
+        board2.setUser(user);
+        boardRepository.save(board2);
+
+        board = boardRepository.findById(board.getId()).orElse(null);
+        board2 = boardRepository.findById(board2.getId()).orElse(null);
+
+        System.out.println("board = " + board);
+        System.out.println("board2 = " + board2);
+
+        user = userRepository.findById(user.getId()).orElse(null);
+        System.out.println("user.boardList = " + user.getBoardList());
+    }
+
+    private final BoardService boardService;
+
+    // 파일 업로드
+    @Value("${file.upload.path}")
+    private String fileUploadPath;
+
+    @PostMapping("/uploadFile")
+    @ResponseBody
+    public ResponseEntity<List<String>> updateFile(MultipartFile[] files) {
+        List<String> list = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+
+            String originalFilename = file.getOriginalFilename();
+            String filePath = fileUploadPath + originalFilename;
+
+            try {
+                file.transferTo(new File(filePath));
+                list.add(originalFilename);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+
+    // 파일 다운로드
+    @GetMapping(value = "/downloadFile", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @ResponseBody
+    public ResponseEntity<Resource> downloadFile(String fileName) {
+        Resource resource = new FileSystemResource(fileUploadPath + fileName);
+        return new ResponseEntity<>(resource, HttpStatus.OK);
+    }
+
+    // 파일 삭제
+    @GetMapping("/deleteFile")
+    public ResponseEntity<String> deleteFile(String fileName) {
+        File file = new File(fileUploadPath + fileName);
+        if (file.exists()) {
+            file.delete();
+            return new ResponseEntity<>("success", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("fail", HttpStatus.NOT_FOUND);
+        }
     }
 
 }
